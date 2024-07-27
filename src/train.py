@@ -97,9 +97,9 @@ def train(env,options,train_options,agent,beam_id,writer):
         new_gain = torch.Tensor.cpu(CB_Env.achievement).detach().numpy().reshape((1, 1))
         max_previous_gain = max(CB_Env.gain_history)
         if new_gain > max_previous_gain:
-            CB_Env.gain_history.append(float(new_gain))                   
+            CB_Env.gain_history.append(float(new_gain[0][0]))                   
         else:
-            CB_Env.gain_history.append(float(max_previous_gain))
+            CB_Env.gain_history.append(float(max_previous_gain[0][0]))
             
     train_options['state'] = state  # used for the next loop
     train_options['best_state'] = CB_Env.best_bf_vec  # used for clustering and assignment
