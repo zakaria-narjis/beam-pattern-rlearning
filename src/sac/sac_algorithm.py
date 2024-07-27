@@ -30,8 +30,12 @@ class SAC:
         self.qf2_target.load_state_dict(self.qf2.state_dict())
 
 
-        self.q_optimizer = optim.Adam(list(self.qf1.parameters()) + list(self.qf2.parameters()), lr=args.q_lr)
-        self.actor_optimizer = optim.Adam(list(self.actor.parameters()), lr=args.policy_lr)
+        self.q_optimizer = optim.Adam(list(self.qf1.parameters()) + list(self.qf2.parameters()), 
+                                      lr=args.q_lr,
+                                      weight_decay=args.q_weight_decay if hasattr(args, "q_weight_decay") else 0)
+        self.actor_optimizer = optim.Adam(list(self.actor.parameters()), 
+                                          lr=args.policy_lr,
+                                          weight_decay=args.policy_weight_decay if hasattr(args, "policy_weight_decay") else 0)
     
         #Training related
         self.global_step = 0
@@ -42,7 +46,9 @@ class SAC:
             self.target_entropy = - args.num_ant
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
             self.alpha = self.log_alpha.exp().item()
-            self.a_optimizer = optim.Adam([self.log_alpha], lr=args.q_lr)
+            self.a_optimizer = optim.Adam([self.log_alpha], 
+                                          lr=args.q_lr,
+                                          weight_decay=args.q_weight_decay if hasattr(args, "q_weight_decay") else 0)
         else:
             self.alpha = args.alpha
 
