@@ -28,6 +28,8 @@ class envCB:
         self.best_bf_vec = self.init_best()
         self.opt_bf_gain()
         self.options = options
+        self.gain_history = [0]
+        self.EGC_history = []
 
     def step(self, input_action):  # input_action: (1, num_ant), rep: phase vector
         self.state = input_action
@@ -35,7 +37,13 @@ class envCB:
         reward, bf_gain = self.reward_fn()
         terminal = 0
         return self.state.clone(), reward, bf_gain, terminal
-
+    
+    def compute_EGC(self):
+        ch_r = torch.Tensor.cpu(self.ch.clone()).numpy()[:, :self.num_ant]
+        ch_i = torch.Tensor.cpu(self.ch.clone()).numpy()[:, self.num_ant:]
+        radius = np.sqrt(np.square(ch_r) + np.square(ch_i))
+        gain_opt = np.mean(np.square(np.sum(radius, axis=1)))
+        return gain_opt
     def reward_fn(self):
         bf_gain = self.bf_gain_cal()
         if bf_gain > self.previous_gain:

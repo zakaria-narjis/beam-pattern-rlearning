@@ -16,7 +16,7 @@ class SAC:
 
     def __init__(self,
                  args,
-                 writer):
+                 writer=None,):
         self.device = args.device
         self.writer = writer
         self.args = args
@@ -51,7 +51,7 @@ class SAC:
                         storage=LazyMemmapStorage(args.buffer_size,), sampler=SamplerWithoutReplacement()
                                                         )
 
-    def Observe(self,batch_obs,batch_actions,batch_rewards,batch_next_obs,batch_dones):
+    def observe(self,batch_obs,batch_actions,batch_rewards,batch_next_obs,batch_dones):
         """
             Observe the environment and store the transition in the replay buffer
             Args:
@@ -61,6 +61,7 @@ class SAC:
                 batch_next_obs: Tensor containing the next observations
                 batch_dones: Tensor containing the dones
         """
+        self.global_step += 1
         batch_transition = TensorDict(
             {
                 "observations":batch_obs.clone(),
@@ -74,7 +75,7 @@ class SAC:
         self.rb.extend(batch_transition)
         self.update()
 
-    def act_train(self,batch_obs):
+    def act_train(self, batch_obs):
         torch.pi
         if self.global_step < self.args.learning_starts and self.args.use_burning_action==True:
             return torch.randint(low=self.args.low_action, 
@@ -86,7 +87,7 @@ class SAC:
 
         return actions
     
-    def act_eval(self,obs):
+    def act_eval(self, obs):
         self.qf1.eval().requires_grad_(False)
         self.qf2.eval().requires_grad_(False)
         self.actor.eval().requires_grad_(False)
@@ -157,7 +158,7 @@ class SAC:
                     for param, target_param in zip(self.qf2.parameters(), self.qf2_target.parameters()):
                         target_param.data.copy_(self.args.tau * param.data + (1 - self.args.tau) * target_param.data)
 
-            if self.global_step % 100 == 0:
+            if self.global_step % 100 == 0 and self.writer is not None:
                 self.writer.add_scalar("losses/qf1_values", qf1_a_values.mean().item(), self.global_step)
                 self.writer.add_scalar("losses/qf2_values", qf2_a_values.mean().item(), self.global_step)
                 self.writer.add_scalar("losses/qf1_loss", qf1_loss.item(), self.global_step)
