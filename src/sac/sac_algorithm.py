@@ -130,8 +130,6 @@ class SAC:
             self.q_optimizer.step()
 
             if self.global_step % self.args.policy_frequency == 0:  # TD 3 Delayed update support
-                if self.critic_only_backbone:
-                    self.backbone.eval().requires_grad_(False)
                 for _ in range(
                     self.args.policy_frequency
                 ):  # compensate for the delay by doing 'actor_update_interval' instead of 1
@@ -153,8 +151,7 @@ class SAC:
                         alpha_loss.backward()
                         self.a_optimizer.step()
                         self.alpha = self.log_alpha.exp().item()
-                if self.critic_only_backbone:
-                    self.backbone.train().requires_grad_(True)
+
 
             # update the target networks
             if self.args.gamma!=0:

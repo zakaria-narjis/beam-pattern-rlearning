@@ -198,6 +198,7 @@ def main():
         env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir))
         train_opt_list.append(copy.deepcopy(train_opt))
         agent = SAC(sac_config,writer)
+        agent.start_time = time.time()
         agent_list.append(agent)
 
     with torch.cuda.device(options['gpu_idx']):
