@@ -1,4 +1,4 @@
-gpu_idx: "cuda:0"
+device: "cuda:0"
 num_ant: 32
 num_bits: 4
 num_NNs: 4  # codebook size

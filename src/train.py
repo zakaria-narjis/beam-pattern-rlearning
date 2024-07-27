@@ -99,14 +99,15 @@ def train(env,options,train_options,agent,beam_id,writer):
         if new_gain > max_previous_gain:
             CB_Env.gain_history.append(float(new_gain[0][0]))                   
         else:
-            CB_Env.gain_history.append(float(max_previous_gain[0][0]))
+            CB_Env.gain_history.append(float(max_previous_gain))
             
     train_options['state'] = state  # used for the next loop
     train_options['best_state'] = CB_Env.best_bf_vec  # used for clustering and assignment
     if (train_options['overall_iter']-1)%500==0:
-        writer.add_scalar(f'Beamforming_gain_beam_{beam_id}', 
-                          {'gain':max_previous_gain,'EGC':CB_Env.compute_EGC()}, 
-                                                               train_options['overall_iter'])
+        print(type(float(max_previous_gain)),float(CB_Env.compute_EGC()))
+        writer.add_scalars(f'Beamforming_gain_beam_{beam_id}', 
+                        {'gain': float(max_previous_gain), 'EGC': float(CB_Env.compute_EGC())}, 
+                        agent.global_step)
         # print(
         #     "Beam: %d, Iter: %d, Reward pred: %d, Reward: %d, BF Gain pred: %.2f, BF Gain: %.2f" % \
         #     (beam_id, train_options['overall_iter'],
@@ -171,7 +172,8 @@ def main():
     ch = dataPrep(options['path'])
     ch = np.concatenate((ch[:, :options['num_ant']],
                         ch[:, int(ch.shape[1] / 2):int(ch.shape[1] / 2) + options['num_ant']]), axis=1)
-    with torch.cuda.device(options['gpu_idx']):
+    
+    with torch.cuda.device(options['device']):
         u_classifier, sensing_beam = KMeans_only(ch, options['num_NNs'], n_bit=options['num_bits'], n_rand_beam=30)
         np.save(os.path.join(run_dir,'sensing_beam.npy'), sensing_beam)
         sensing_beam = torch.from_numpy(sensing_beam).float().cuda()
@@ -201,8 +203,8 @@ def main():
         agent.start_time = time.time()
         agent_list.append(agent)
 
-    with torch.cuda.device(options['gpu_idx']):
-        for sample_id in range(options['num_loop']):
+    with torch.cuda.device(options['device']):
+        for sample_id in tqdm(range(options['num_loop'])):
 
             # ---------- Sampling ---------- #
             n_sample = int(ch.shape[0] * options['ch_sample_ratio'])
