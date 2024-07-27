@@ -1,6 +1,6 @@
 import numpy as np
-from DFT_gen import DFT_gen
-from function_lib import phases_gen, bf_gain_cal, corr_mining, bf_gain_cal_np, corr_mining_np
+from .DFT_gen import DFT_gen
+from .function_lib import phases_gen, bf_gain_cal, corr_mining, bf_gain_cal_np, corr_mining_np
 from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsClassifier
 

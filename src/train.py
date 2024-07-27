@@ -123,9 +123,9 @@ def train(env,options,train_options,agent,beam_id,writer):
 
 
 def main():
-    experiments_dir = '../experiments/runs/'
-    env_config_path = '../experiments/configs/env_config.yaml'
-    sac_config_path = '../experiments/configs/env_config.yaml'
+    experiments_dir = 'experiments/runs/'
+    env_config_path = 'experiments/configs/env_config.yaml'
+    sac_config_path = 'experiments/configs/sac_config.yaml'
     with open(sac_config_path) as f:
         train_opt=yaml.load(f, Loader=yaml.FullLoader)
 
@@ -177,10 +177,10 @@ def main():
                         ch[:, int(ch.shape[1] / 2):int(ch.shape[1] / 2) + options['num_ant']]), axis=1)
     with torch.cuda.device(options['gpu_idx']):
         u_classifier, sensing_beam = KMeans_only(ch, options['num_NNs'], n_bit=options['num_bits'], n_rand_beam=30)
-        np.save('sensing_beam.npy', sensing_beam)
+        np.save(os.path.join(run_dir,'sensing_beam.npy'), sensing_beam)
         sensing_beam = torch.from_numpy(sensing_beam).float().cuda()
 
-        filename = 'Codebook_Learning_RL/kmeans_model.sav'
+        filename =  os.path.join(run_dir, 'kmeans_model.sav')
         pickle.dump(u_classifier, open(filename, 'wb'))
 
         # Quantization settings

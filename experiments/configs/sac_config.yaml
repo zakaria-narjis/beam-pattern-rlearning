@@ -1,7 +1,9 @@
+exp_name: "sac"
+seed: 0
 state: 0
 best_state: 0
 num_iter: 100  # inner loop
-tau: 1e-2
+tau: 0.001
 overall_iter: 1
 
 buffer_size: 8192
@@ -15,5 +17,5 @@ policy_lr: 0.0003
 learning_starts: 0
 autotune: true
 use_burning_action: false
-q_weight_decay: 1e-2
-policy_weight_decay: 1e-3
+q_weight_decay:  0.001
+policy_weight_decay:  0.0001

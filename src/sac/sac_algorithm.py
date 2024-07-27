@@ -21,11 +21,11 @@ class SAC:
         self.writer = writer
         self.args = args
         #networks
-        self.actor = Actor(args,self.backbone).to(self.device)
-        self.qf1 = SoftQNetwork(args,self.backbone).to(self.device)
-        self.qf2 = SoftQNetwork(args,self.backbone).to(self.device)
-        self.qf1_target = SoftQNetwork(args,self.backbone).to(self.device)
-        self.qf2_target = SoftQNetwork(args,self.backbone).to(self.device)
+        self.actor = Actor(args,).to(self.device)
+        self.qf1 = SoftQNetwork(args,).to(self.device)
+        self.qf2 = SoftQNetwork(args,).to(self.device)
+        self.qf1_target = SoftQNetwork(args,).to(self.device)
+        self.qf2_target = SoftQNetwork(args,).to(self.device)
         self.qf1_target.load_state_dict(self.qf1.state_dict())
         self.qf2_target.load_state_dict(self.qf2.state_dict())
 
@@ -43,7 +43,7 @@ class SAC:
     
         # entropy
         if args.autotune:
-            self.target_entropy = - args.num_ant
+            self.target_entropy = - args.action_shape
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
             self.alpha = self.log_alpha.exp().item()
             self.a_optimizer = optim.Adam([self.log_alpha], 
