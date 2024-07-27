@@ -39,8 +39,8 @@ class Actor(nn.Module):
 
         return mean, log_std
 
-    def get_action(self, **kwargs):
-        mean, log_std = self(**kwargs)
+    def get_action(self, obs):
+        mean, log_std = self(obs)
         std = log_std.exp()
         normal = torch.distributions.Normal(mean, std)
         x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))

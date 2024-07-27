@@ -43,8 +43,7 @@ def getdatetime():
 
 def train(env,options,train_options,agent,beam_id,writer):
 
-    device_index = train_options['gpu']
-    device = f'cuda:{device_index}'
+    device = train_options['device']
     CB_Env = env   
     if train_options['overall_iter'] == 1:
         state = torch.zeros((1, options['num_ant'])).float().to(device)
@@ -57,10 +56,7 @@ def train(env,options,train_options,agent,beam_id,writer):
     iteration = 0
     num_of_iter = train_options['num_iter']  
     while iteration < num_of_iter:
-        
-        device_index = train_options['gpu']
-        device = f'cuda:{device_index}'
-        
+          
         action = agent.act_train(state)
         reward_pred, bf_gain_pred, action_quant_pred, state_1_pred = CB_Env.get_reward(action.to(device))
         reward_pred = torch.from_numpy(reward_pred).float().to(device)
@@ -75,10 +71,10 @@ def train(env,options,train_options,agent,beam_id,writer):
 
         batch_transition = TensorDict(
             {
-                "observations":torch.from_numpy(state).clone(),
-                "next_observations":torch.from_numpy(state_1).clone(),
-                "actions":action.clone(),
-                "rewards":torch.from_numpy(reward).clone(),
+                "observations":state.detach().clone(),
+                "next_observations":state_1.detach().clone(),
+                "actions":action.detach().clone(),
+                "rewards":reward.detach().clone(),
                 "dones":torch.tensor([terminal]*state.shape[0]),
             },
             batch_size = [state.shape[0]],
@@ -86,10 +82,10 @@ def train(env,options,train_options,agent,beam_id,writer):
         agent.rb.extend(batch_transition)
 
         agent.observe(
-            torch.from_numpy(state), 
-            torch.from_numpy(action_quant_pred), 
-            torch.from_numpy(reward_pred),
-            torch.from_numpy(state_1_pred),
+            state.detach().clone(), 
+            action_quant_pred.detach().clone(), 
+            reward_pred.detach().clone(),
+            state_1_pred.detach().clone(),
             torch.tensor([terminal]*state.shape[0]), 
            )
 
