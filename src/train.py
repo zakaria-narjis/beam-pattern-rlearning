@@ -47,7 +47,6 @@ def train(env,options,train_options,agent,beam_id,writer):
     CB_Env = env   
     if train_options['overall_iter'] == 1:
         state = torch.zeros((1, options['num_ant'])).float().to(device)
-        print('Initial State Activated.')
     else:
         state = train_options['state']
     
@@ -103,9 +102,8 @@ def train(env,options,train_options,agent,beam_id,writer):
             
     train_options['state'] = state  # used for the next loop
     train_options['best_state'] = CB_Env.best_bf_vec  # used for clustering and assignment
-    if (train_options['overall_iter']-1)%500==0:
-        print(type(float(max_previous_gain)),float(CB_Env.compute_EGC()))
-        writer.add_scalars(f'Beamforming_gain_beam_{beam_id}', 
+
+    writer.add_scalars(f'Beamforming_gain_beam_{beam_id}', 
                         {'gain': float(max_previous_gain), 'EGC': float(CB_Env.compute_EGC())}, 
                         agent.global_step)
         # print(
