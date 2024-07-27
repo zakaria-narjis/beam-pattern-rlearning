@@ -1,0 +1,19 @@
+state: 0
+best_state: 0
+num_iter: 100  # inner loop
+tau: 1e-2
+overall_iter: 1
+
+buffer_size: 8192
+batch_size: 1024
+gamma: 0
+alpha: 0.2
+device: "cuda:0"
+torch_deterministic: true
+q_lr: 0.003
+policy_lr: 0.0003
+learning_starts: 0
+autotune: true
+use_burning_action: false
+q_weight_decay: 1e-2
+policy_weight_decay: 1e-3

@@ -19,7 +19,7 @@ from tqdm.auto import tqdm
 from datetime import datetime
 from sac.sac_algorithm import SAC
 from torch.utils.tensorboard import SummaryWriter
-
+import scipy.io as scio
 
 
 class Config(object):
@@ -108,7 +108,9 @@ def train(env,options,train_options,agent,beam_id,writer):
     train_options['state'] = state  # used for the next loop
     train_options['best_state'] = CB_Env.best_bf_vec  # used for clustering and assignment
     if (train_options['overall_iter']-1)%500==0:
-        writer.add_scalar(f'Beamforming_gain_beam_{beam_id}', max_previous_gain, train_options['overall_iter'])
+        writer.add_scalar(f'Beamforming_gain_beam_{beam_id}', 
+                          {'gain':max_previous_gain,'EGC':CB_Env.compute_EGC()}, 
+                                                               train_options['overall_iter'])
         # print(
         #     "Beam: %d, Iter: %d, Reward pred: %d, Reward: %d, BF Gain pred: %.2f, BF Gain: %.2f" % \
         #     (beam_id, train_options['overall_iter'],
@@ -129,6 +131,13 @@ def main():
 
     with open(env_config_path) as f:
         options =yaml.load(f, Loader=yaml.FullLoader)
+
+    train_opt['high_action'] = torch.pi
+    train_opt['low_action'] = -torch.pi
+    train_opt['action_shape'] = options['num_ant']
+    train_opt['obs_shape'] = options['num_ant']
+
+
     sac_config = Config(train_opt)
     env_config = Config(options)
 
@@ -158,8 +167,10 @@ def main():
     with make_dirs_and_open(os.path.join(run_dir, 'configs/env_config.yaml'), 'w') as f:
         yaml.dump(options, f, indent=4, default_flow_style=False)
 
-    if not os.path.exists('beams/'):
-        os.mkdir('beams/')
+    if not os.path.exists(os.path.join(run_dir, 'beams/')):
+        os.mkdir(os.path.join(run_dir, 'beams/')) # to store the beamforming codebooks
+    if not os.path.exists(os.path.join(run_dir, 'beamforming_gain_records/')):
+        os.mkdir(os.path.join(run_dir, 'beamforming_gain_records/')) # to store the beamforming gain records
 
     ch = dataPrep(options['path'])
     ch = np.concatenate((ch[:, :options['num_ant']],
@@ -169,7 +180,7 @@ def main():
         np.save('sensing_beam.npy', sensing_beam)
         sensing_beam = torch.from_numpy(sensing_beam).float().cuda()
 
-        filename = 'kmeans_model.sav'
+        filename = 'Codebook_Learning_RL/kmeans_model.sav'
         pickle.dump(u_classifier, open(filename, 'wb'))
 
         # Quantization settings
@@ -188,7 +199,7 @@ def main():
         agent_list=[]
     
     for beam_id in range(options['num_NNs']):
-        env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options))
+        env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir))
         train_opt_list.append(copy.deepcopy(train_opt))
         agent = SAC(sac_config,writer)
         agent_list.append(agent)
@@ -248,6 +259,24 @@ def main():
             for beam_id in range(options['num_NNs']):
                 train_opt_list[beam_id] = train(env_list[beam_id],options, train_opt_list[beam_id],agent_list[beam_id], beam_id,writer)
 
+    writer.close()
+    num_beam = options['num_NNs']
+    num_ant = options['num_ant']
+    for beam_id in range(num_beam):
+        fname = 'beams_' + str(beam_id) + '_max.txt'
+        with open(os.path.join(run_dir,'beams',fname), 'r') as f:
+            lines = f.readlines()
+            last_line = lines[-1]
+            results[beam_id, :] = np.fromstring(last_line.replace("\n", ""), sep=',').reshape(1, -1)
+
+    results = (1 / np.sqrt(num_ant)) * (results[:, ::2] + 1j * results[:, 1::2])
+
+    scio.savemat(os.path.join(run_dir,'beams','beam_codebook.mat'), {'beams': results})
+    for beam_id  in range(num_beam):
+        EGC = env_list[beam_id].compute_EGC()
+        gain_record = env_list[beam_id].gain_history[1:].append(EGC)
+        gain_record = np.array(gain_record)/options['num_ant']
+        np.save(os.path.join(run_dir,'beamforming_gain_records',f'beam_{beam_id}_gain_records'),gain_record)
 
 if __name__ == '__main__':
     main()

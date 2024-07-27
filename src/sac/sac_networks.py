@@ -7,12 +7,11 @@ LOG_STD_MAX = 3
 LOG_STD_MIN = -5
 
 class Actor(nn.Module):
-    def __init__(self, args, features_extractor,use_xavier = True):
+    def __init__(self, args,use_xavier = True):
         super().__init__()
         self.args = args
         input_shape = args.action_shape
         output_shape = args.obs_shape
-        self.features_extractor = features_extractor
         self.high_action = args.high_action
         self.low_action = args.low_action
             

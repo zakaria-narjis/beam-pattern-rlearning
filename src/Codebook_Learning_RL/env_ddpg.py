@@ -5,7 +5,7 @@ import numpy as np
 
 class envCB:
 
-    def __init__(self, ch, num_ant, num_bits, idx, options):
+    def __init__(self, ch, num_ant, num_bits, idx, options,experiment_path):
 
         self.idx = idx
         self.num_ant = num_ant
@@ -30,6 +30,7 @@ class envCB:
         self.options = options
         self.gain_history = [0]
         self.EGC_history = []
+        self.experiment_path = experiment_path
 
     def step(self, input_action):  # input_action: (1, num_ant), rep: phase vector
         self.state = input_action
@@ -44,20 +45,20 @@ class envCB:
         radius = np.sqrt(np.square(ch_r) + np.square(ch_i))
         gain_opt = np.mean(np.square(np.sum(radius, axis=1)))
         return gain_opt
+    
     def reward_fn(self):
         bf_gain = self.bf_gain_cal()
         if bf_gain > self.previous_gain:
             if bf_gain > self.threshold:
                 reward = np.array([1]).reshape((1, 1))
                 self.threshold = self.threshold_modif(bf_gain)
-                # print('threshold reset to: %.1f.' % self.threshold)
             else:
                 reward = np.array([1]).reshape((1, 1))
         else:
             if bf_gain > self.threshold:
                 reward = np.array([1]).reshape((1, 1))
                 self.threshold = self.threshold_modif(bf_gain)
-                # print('threshold reset to: %.1f.' % self.threshold)
+
             else:
                 reward = np.array([-1]).reshape((1, 1))
         self.previous_gain = self.previous_gain_pred
@@ -66,8 +67,6 @@ class envCB:
     def get_reward(self, input_action):
         inner_state = input_action
 
-        # Quantization Processing
-        # self.options['ph_table_rep'].cuda()
         mat_dist = torch.abs(inner_state.reshape(self.num_ant, 1) - self.options['ph_table_rep'])
         action_quant = self.options['ph_table_rep'][range(self.num_ant), torch.argmin(mat_dist, dim=1)].reshape(1, -1)
 
@@ -77,64 +76,34 @@ class envCB:
             if bf_gain > self.threshold:  # legacy
                 reward = np.array([1]).reshape((1, 1))
                 self.threshold = self.threshold_modif_get_reward(inner_bf, bf_gain)
-                # print('threshold reset to: %.1f.' % self.threshold)
+
             else:
                 reward = np.array([1]).reshape((1, 1))
         else:
-            if bf_gain > self.threshold:  # legacy: never in this branch
+            if bf_gain > self.threshold: 
                 reward = np.array([1]).reshape((1, 1))
                 self.threshold = self.threshold_modif_get_reward(inner_bf, bf_gain)
-                # print('threshold reset to: %.1f.' % self.threshold)
+
             else:
                 reward = np.array([-1]).reshape((1, 1))
-        # if self.count % self.record_freq == 0:
-        #     self.gain_vs_iter()
-        #     if self.count == self.record_decay_th:
-        #         self.record_freq = 1000
+
         self.previous_gain_pred = bf_gain + 0.1
         self.count += 1
         return reward, bf_gain, action_quant.clone(), action_quant.clone()
 
     def threshold_modif(self, bf_gain):
-        # state_print = torch.Tensor.cpu(self.state.clone()).numpy()
-        # th_print = np.array(torch.Tensor.cpu(self.threshold)).reshape((1, 1))
-        # if os.path.exists('beams.txt'):
-        #     with open('beams.txt', 'ab') as bm:
-        #         np.savetxt(bm, th_print, fmt='%.2f', delimiter='\n')
-        #     with open('beams.txt', 'ab') as bm:
-        #         np.savetxt(bm, state_print, fmt='%.2f', delimiter=',')
-        # else:
-        #     gain_max_print = np.array(self.gain_opt).reshape((1, 1))
-        #     np.savetxt('beams.txt', gain_max_print, fmt='%.2f', delimiter='\n')
-        #     with open('beams.txt', 'ab') as bm:
-        #         np.savetxt(bm, th_print, fmt='%.2f', delimiter='\n')
-        #     with open('beams.txt', 'ab') as bm:
-        #         np.savetxt(bm, state_print, fmt='%.2f', delimiter=',')
+
         self.achievement = bf_gain
         self.gain_recording(self.bf_vec, self.idx)
-        # self.threshold += self.th_step
         self.threshold = bf_gain
         return self.threshold
 
     def threshold_modif_get_reward(self, inner_bf, bf_gain):
-        # state_print = torch.Tensor.cpu(inner_state).numpy()
-        # th_print = np.array(torch.Tensor.cpu(self.threshold)).reshape((1, 1))
-        # if os.path.exists('beams.txt'):
-        #     with open('beams.txt', 'ab') as bm:
-        #         np.savetxt(bm, th_print, fmt='%.2f', delimiter='\n')
-        #     with open('beams.txt', 'ab') as bm:
-        #         np.savetxt(bm, state_print, fmt='%.2f', delimiter=',')
-        # else:
-        #     gain_max_print = np.array(self.gain_opt).reshape((1, 1))
-        #     np.savetxt('beams.txt', gain_max_print, fmt='%.2f', delimiter='\n')
-        #     with open('beams.txt', 'ab') as bm:
-        #         np.savetxt(bm, th_print, fmt='%.2f', delimiter='\n')
-        #     with open('beams.txt', 'ab') as bm:
-        #         np.savetxt(bm, state_print, fmt='%.2f', delimiter=',')
+
         self.achievement = bf_gain
         self.gain_recording(inner_bf, self.idx)
-        # self.threshold += self.th_step
         self.threshold = bf_gain
+
         return self.threshold
 
     def opt_bf_gain(self):
@@ -184,17 +153,6 @@ class envCB:
         bf_gain = torch.mean(bf_gain_pattern)
         return bf_gain
 
-    # def gain_vs_iter(self):
-    #     gain_best = max(self.gain_record).reshape((1, 1))
-    #     if os.path.exists('performance.txt'):
-    #         with open('performance.txt', 'ab') as pf:
-    #             np.savetxt(pf, np.array(self.count).reshape((1, 1)), fmt='%.2f', delimiter='\n')
-    #         with open('performance.txt', 'ab') as pf:
-    #             np.savetxt(pf, gain_best, fmt='%.2f', delimiter='\n')
-    #     else:
-    #         np.savetxt('performance.txt', np.array(self.count).reshape((1, 1)), fmt='%.2f', delimiter='\n')
-    #         with open('performance.txt', 'ab') as pf:
-    #             np.savetxt(pf, gain_best, fmt='%.2f', delimiter='\n')
 
     def gain_recording(self, bf_vec, idx):
         new_gain = torch.Tensor.cpu(self.achievement).detach().numpy().reshape((1, 1))
@@ -202,16 +160,15 @@ class envCB:
         if new_gain > max(self.gain_record):
             self.gain_record.append(new_gain)
             self.best_bf_vec = torch.Tensor.cpu(bf_vec).detach().numpy().reshape(1, -1)
-            if os.path.exists('beams/beams_' + str(idx) + '_max.txt'):
-                with open('beams/beams_' + str(idx) + '_max.txt', 'ab') as bm:
+            beam_path = os.path.join(self.experiment_path, 'beams/beams_' + str(idx) + '_max.txt')
+            if os.path.exists(beam_path):
+                with open(beam_path, 'ab') as bm:
                     np.savetxt(bm, new_gain, fmt='%.2f', delimiter='\n')
-                with open('beams/beams_' + str(idx) + '_max.txt', 'ab') as bm:
+                with open(beam_path, 'ab') as bm:
                     np.savetxt(bm, bf_print, fmt='%.5f', delimiter=',')
             else:
-                np.savetxt('beams/beams_' + str(idx) + '_max.txt', new_gain, fmt='%.2f', delimiter='\n')
-                # with open('beams/beams_' + str(idx) + '_max.txt', 'ab') as bm:
-                #     np.savetxt(bm, new_gain, fmt='%.2f', delimiter='\n')
-                with open('beams/beams_' + str(idx) + '_max.txt', 'ab') as bm:
+                np.savetxt(beam_path, new_gain, fmt='%.2f', delimiter='\n')
+                with open(beam_path, 'ab') as bm:
                     np.savetxt(bm, bf_print, fmt='%.5f', delimiter=',')
             self.best_bf_vec = bf_vec
 
