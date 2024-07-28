@@ -5,24 +5,25 @@ import numpy as np
 
 class envCB:
 
-    def __init__(self, ch, num_ant, num_bits, idx, options,experiment_path):
+    def __init__(self, ch, num_ant, num_bits, idx, options,experiment_path,device):
 
         self.idx = idx
+        self.device = 'cuda:0'
         self.num_ant = num_ant
         self.num_bits = num_bits
         self.cb_size = 2 ** self.num_bits
         self.codebook = self.codebook_gen()
-        self.ch = torch.from_numpy(ch).float().cuda()
-        self.state = torch.zeros((1, self.num_ant)).float().cuda()
+        self.ch = torch.from_numpy(ch).float().to(device)
+        self.state = torch.zeros((1, self.num_ant)).float().to(device)
         self.bf_vec = self.init_bf_vec()
         self.previous_gain = 0
         self.previous_gain_pred = 0
         self.th_step = 0.01
-        self.threshold = torch.tensor([0]).float().cuda()
+        self.threshold = torch.tensor([0]).float().to(device)
         self.count = 1
         self.record_freq = 10
         self.record_decay_th = 1000
-        self.achievement = torch.tensor([0]).float().cuda()
+        self.achievement = torch.tensor([0]).float().to(device)
         self.gain_record = [np.array(0)]
         self.N_count = 1
         self.best_bf_vec = self.init_best()
@@ -115,7 +116,7 @@ class envCB:
         # return gain_opt
 
     def phase2bf(self, ph_vec):
-        bf_vec = torch.zeros((1, 2 * self.num_ant)).float().cuda()
+        bf_vec = torch.zeros((1, 2 * self.num_ant)).float().to(self.device)
         for kk in range(self.num_ant):
             bf_vec[0, 2*kk] = torch.cos(ph_vec[0, kk])
             bf_vec[0, 2*kk+1] = torch.sin(ph_vec[0, kk])
@@ -185,7 +186,7 @@ class envCB:
         bf_vec = torch.empty((1, 2 * self.num_ant))
         bf_vec[0, ::2] = torch.tensor([1])
         bf_vec[0, 1::2] = torch.tensor([0])
-        bf_vec = bf_vec.float().cuda()
+        bf_vec = bf_vec.float().to(self.device)
         return bf_vec
 
     def init_best(self):
@@ -196,4 +197,4 @@ class envCB:
         for kk in range(self.num_ant):
             bf_vec[0, 2*kk] = np.real(bf_complex[0, kk])
             bf_vec[0, 2*kk+1] = np.imag(bf_complex[0, kk])
-        return torch.from_numpy(bf_vec).float().cuda()
+        return torch.from_numpy(bf_vec).float().to(self.device)

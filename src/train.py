@@ -103,7 +103,7 @@ def train(env,options,train_options,agent,beam_id,writer):
     train_options['state'] = state  # used for the next loop
     train_options['best_state'] = CB_Env.best_bf_vec  # used for clustering and assignment
 
-    writer.add_scalars(f'Beamforming_gain_beam_{beam_id}', 
+    writer.add_scalars(f'gain_records/Beamforming_gain_beam_{beam_id}', 
                         {'gain': float(max_previous_gain), 'EGC': float(CB_Env.compute_EGC())}, 
                         agent.global_step)
         # print(
@@ -174,7 +174,7 @@ def main():
     with torch.cuda.device(options['device']):
         u_classifier, sensing_beam = KMeans_only(ch, options['num_NNs'], n_bit=options['num_bits'], n_rand_beam=30)
         np.save(os.path.join(run_dir,'sensing_beam.npy'), sensing_beam)
-        sensing_beam = torch.from_numpy(sensing_beam).float().cuda()
+        sensing_beam = torch.from_numpy(sensing_beam).float().to(options['device'])
 
         filename =  os.path.join(run_dir, 'kmeans_model.sav')
         pickle.dump(u_classifier, open(filename, 'wb'))
@@ -185,17 +185,17 @@ def main():
             np.linspace(int(-(options['num_ph'] - 2) / 2),
                         int(options['num_ph'] / 2),
                         num=options['num_ph'],
-                        endpoint=True)).type(dtype=torch.float32).reshape(1, -1).cuda()
-        options['pi'] = torch.tensor(np.pi).cuda()
+                        endpoint=True)).type(dtype=torch.float32).reshape(1, -1).to(options['device'])
+        options['pi'] = torch.tensor(np.pi).to(options['device'])
         options['ph_table'] = (2 * options['pi']) / options['num_ph'] * options['multi_step']
-        options['ph_table'].cuda()
+        options['ph_table'].to(options['device'])
         options['ph_table_rep'] = options['ph_table'].repeat(options['num_ant'], 1)
         env_list = []
         train_opt_list = []
         agent_list=[]
     
     for beam_id in range(options['num_NNs']):
-        env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir))
+        env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir,train_opt['device']))
         train_opt_list.append(copy.deepcopy(train_opt))
         agent = SAC(sac_config,writer)
         agent.start_time = time.time()
@@ -207,7 +207,7 @@ def main():
             # ---------- Sampling ---------- #
             n_sample = int(ch.shape[0] * options['ch_sample_ratio'])
             ch_sample_id = np.random.permutation(ch.shape[0])[0:n_sample]
-            ch_sample = torch.from_numpy(ch[ch_sample_id, :]).float().cuda()
+            ch_sample = torch.from_numpy(ch[ch_sample_id, :]).float().to(options['device'])
 
             # ---------- Clustering ---------- #
         #     start_time = time.time()
@@ -236,7 +236,7 @@ def main():
         #     start_time = time.time()
 
             # best_state matrix
-            best_beam_mtx = torch.zeros((options['num_NNs'], 2 * options['num_ant'])).float().cuda()
+            best_beam_mtx = torch.zeros((options['num_NNs'], 2 * options['num_ant'])).float().to(options['device'])
             for pp in range(options['num_NNs']):
                 best_beam_mtx[pp, :] = env_list[pp].best_bf_vec
             gain_mtx = bf_gain_cal(best_beam_mtx, ch_sample)  # (n_beam, n_user)
@@ -259,6 +259,7 @@ def main():
     writer.close()
     num_beam = options['num_NNs']
     num_ant = options['num_ant']
+    results = np.empty((num_beam, 2*num_ant))
     for beam_id in range(num_beam):
         fname = 'beams_' + str(beam_id) + '_max.txt'
         with open(os.path.join(run_dir,'beams',fname), 'r') as f:
@@ -271,7 +272,8 @@ def main():
     scio.savemat(os.path.join(run_dir,'beams','beam_codebook.mat'), {'beams': results})
     for beam_id  in range(num_beam):
         EGC = env_list[beam_id].compute_EGC()
-        gain_record = env_list[beam_id].gain_history[1:].append(EGC)
+        gain_record = env_list[beam_id].gain_history[1:]
+        gain_record.append(EGC)
         gain_record = np.array(gain_record)/options['num_ant']
         np.save(os.path.join(run_dir,'beamforming_gain_records',f'beam_{beam_id}_gain_records'),gain_record)
 
