@@ -233,7 +233,7 @@ def main():
         env_list = []
         train_opt_list = []
         agent_list=[]
-    if env_config.parrallel_devices == None:
+    if env_config.parallel_devices == None:
         for beam_id in range(options['num_NNs']):
             train_opt_list.append(copy.deepcopy(train_opt))
             env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir,train_opt['device']))  
@@ -241,8 +241,8 @@ def main():
             agent.start_time = time.time()
             agent_list.append(agent)
     else:
-        assert len(env_config.parrallel_devices) == options['num_NNs']
-        for beam_id, device in enumerate(env_config.parrallel_devices):
+        assert len(env_config.parallel_devices) == options['num_NNs']
+        for beam_id, device in enumerate(env_config.parallel_devices):
             train_opt_list.append(copy.deepcopy(train_opt))
             train_opt_list[-1]['device'] = device  
             agent_config = Config(train_opt_list[-1])
@@ -304,7 +304,7 @@ def main():
                 env_list[ii].ch = ch_group[assignment_record[ii]].to(train_opt_list[ii]['device'])
                 env_list[ii].EGC_history.append(env_list[ii].compute_EGC())
         #     print("Assignment uses %s seconds." % (time.time() - start_time))
-            if env_config.parrallel_devices == None:
+            if env_config.parallel_devices == None:
                 for beam_id in range(options['num_NNs']):
                     train_opt_list[beam_id] = train(env_list[beam_id],options, train_opt_list[beam_id],agent_list[beam_id], beam_id,writer)
             else:

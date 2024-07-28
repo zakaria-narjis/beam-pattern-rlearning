@@ -7,4 +7,4 @@ num_loop: 10  # outer loop
 target_update: 3
 path: 'src/Codebook_Learning_RL/grid1101-1400.mat'
 clustering_mode: 'random'
-parrallel_devices : null
+parallel_devices : null
