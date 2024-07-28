@@ -214,7 +214,7 @@ def main():
             bf_mat_sample = bf_gain_cal(sensing_beam, ch_sample)
             # print("Clustering -1 uses %s seconds." % (time.time() - start_time))
             # start_time = time.time()
-            f_matrix = corr_mining(bf_mat_sample)
+            f_matrix = corr_mining(bf_mat_sample,options['device'])
             f_matrix_np = torch.Tensor.cpu(f_matrix).numpy()
             # print("Clustering 0 uses %s seconds." % (time.time() - start_time))
             # start_time = time.time()

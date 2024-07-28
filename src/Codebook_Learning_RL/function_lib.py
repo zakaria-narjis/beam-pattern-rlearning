@@ -85,13 +85,13 @@ def corr_mining_np(bf_gain_matrix):
     return feature_mat
 
 
-def corr_mining(bf_gain_matrix):
+def corr_mining(bf_gain_matrix,device):
     num_sen_beams = bf_gain_matrix.shape[0]
     num_user = bf_gain_matrix.shape[1]
     num_feature = ncr(num_sen_beams, 2)
     norm_factor = torch.mean(bf_gain_matrix, dim=0)
-    mat_1 = torch.zeros((num_feature, num_user)).float().cuda()
-    mat_2 = torch.zeros((num_feature, num_user)).float().cuda()
+    mat_1 = torch.zeros((num_feature, num_user)).float().to(device)
+    mat_2 = torch.zeros((num_feature, num_user)).float().to(device)
     for ii in range(num_sen_beams-1):
         if ii == 0:
             mat_1 = bf_gain_matrix[ii, :].reshape(1, -1).repeat(num_sen_beams-ii-1, 1)
