@@ -193,13 +193,24 @@ def main():
         env_list = []
         train_opt_list = []
         agent_list=[]
-    
-    for beam_id in range(options['num_NNs']):
-        env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir,train_opt['device']))
-        train_opt_list.append(copy.deepcopy(train_opt))
-        agent = SAC(sac_config,writer)
-        agent.start_time = time.time()
-        agent_list.append(agent)
+    if env_config.parrallel_devices == None:
+        for beam_id in range(options['num_NNs']):
+            train_opt_list.append(copy.deepcopy(train_opt))
+            env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir,train_opt['device']))  
+            agent = SAC(sac_config,writer)
+            agent.start_time = time.time()
+            agent_list.append(agent)
+    else:
+        assert len(env_config.parrallel_devices) == options['num_NNs']
+        for beam_id, device in enumerate(env_config.parrallel_devices):
+            train_opt_list.append(copy.deepcopy(train_opt))
+            train_opt_list[-1]['device'] = device  
+            agent_config = Config(train_opt_list[-1])
+            env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir,device))
+            agent = SAC(agent_config,writer)
+            agent.start_time = time.time()
+            agent_list.append(agent)
+            
 
     with torch.cuda.device(options['device']):
         for sample_id in tqdm(range(options['num_loop'])):
@@ -250,7 +261,7 @@ def main():
             row_ind, col_ind = linear_sum_assignment(cost_mtx)
             assignment_record = dict(zip(row_ind.tolist(), col_ind.tolist()))  # key: network, value: cluster
             for ii in range(options['num_NNs']):
-                env_list[ii].ch = ch_group[assignment_record[ii]]
+                env_list[ii].ch = ch_group[assignment_record[ii]].to(train_opt_list[ii]['device'])
                 env_list[ii].EGC_history.append(env_list[ii].compute_EGC())
         #     print("Assignment uses %s seconds." % (time.time() - start_time))
             for beam_id in range(options['num_NNs']):
