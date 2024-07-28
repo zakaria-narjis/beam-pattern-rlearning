@@ -41,46 +41,6 @@ def getdatetime():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
-def train_worker(beam_id, env, options, train_opt, agent, writer, result_queue):
-    # Set the GPU for this process
-    torch.cuda.set_device(train_opt['device'])
-    # Run the training function
-    result = train(env, options, train_opt, agent, beam_id, writer)
-    
-    # Put the result in the queue
-    result_queue.put((beam_id, result))
-
-def run_parallel_training(env_list, options, train_opt_list, agent_list, writer):
-    num_beams = options['num_NNs']
-    
-    # Create a queue to store results
-    result_queue = Queue()
-    
-    # Create and start processes
-    processes = []
-    for beam_id in range(num_beams):
-        p = Process(target=train_worker, args=(beam_id, env_list[beam_id], options, 
-                                               train_opt_list[beam_id], agent_list[beam_id], 
-                                               writer, result_queue))
-        p.start()
-        processes.append(p)
-    
-    # Wait for all processes to complete
-    for p in processes:
-        p.join()
-    
-    # Collect results
-    results = []
-    while not result_queue.empty():
-        results.append(result_queue.get())
-    
-    # Sort results by beam_id and update train_opt_list
-    results.sort(key=lambda x: x[0])
-    for beam_id, result in results:
-        train_opt_list[beam_id] = result
-    
-    return train_opt_list
-
 def train(env,options,train_options,agent,beam_id,writer):
 
     device = train_options['device']
@@ -233,24 +193,12 @@ def main():
         env_list = []
         train_opt_list = []
         agent_list=[]
-    if env_config.parallel_devices == None:
-        for beam_id in range(options['num_NNs']):
-            train_opt_list.append(copy.deepcopy(train_opt))
-            env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir,train_opt['device']))  
-            agent = SAC(sac_config,writer)
-            agent.start_time = time.time()
-            agent_list.append(agent)
-    else:
-        assert len(env_config.parallel_devices) == options['num_NNs']
-        for beam_id, device in enumerate(env_config.parallel_devices):
-            train_opt_list.append(copy.deepcopy(train_opt))
-            train_opt_list[-1]['device'] = device  
-            agent_config = Config(train_opt_list[-1])
-            env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir,device))
-            agent = SAC(agent_config,writer)
-            agent.start_time = time.time()
-            agent_list.append(agent)
-            
+    for beam_id in range(options['num_NNs']):
+        train_opt_list.append(copy.deepcopy(train_opt))
+        env_list.append(envCB(ch, options['num_ant'], options['num_bits'], beam_id, options, run_dir,train_opt['device']))  
+        agent = SAC(sac_config,writer)
+        agent.start_time = time.time()
+        agent_list.append(agent)
 
     with torch.cuda.device(options['device']):
         for sample_id in tqdm(range(options['num_loop'])):
@@ -304,11 +252,9 @@ def main():
                 env_list[ii].ch = ch_group[assignment_record[ii]].to(train_opt_list[ii]['device'])
                 env_list[ii].EGC_history.append(env_list[ii].compute_EGC())
         #     print("Assignment uses %s seconds." % (time.time() - start_time))
-            if env_config.parallel_devices == None:
-                for beam_id in range(options['num_NNs']):
-                    train_opt_list[beam_id] = train(env_list[beam_id],options, train_opt_list[beam_id],agent_list[beam_id], beam_id,writer)
-            else:
-                train_opt_list = run_parallel_training(env_list, options, train_opt_list, agent_list, None)
+            for beam_id in range(options['num_NNs']):
+                train_opt_list[beam_id] = train(env_list[beam_id],options, train_opt_list[beam_id],agent_list[beam_id], beam_id,writer)
+
     writer.close()
     num_beam = options['num_NNs']
     num_ant = options['num_ant']
