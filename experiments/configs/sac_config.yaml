@@ -1,24 +1,41 @@
 exp_name: "sac"
+
 seed: 0
-state: 0
-best_state: 0
-num_iter: 100  # inner loop
-tau: 0.001
-overall_iter: 1
 
 buffer_size: 8192
+
 batch_size: 1024
+
 gamma: 0
-alpha: 0.2
+
 device: "cuda:0"
+
 torch_deterministic: true
+
 q_lr: 0.003
-policy_lr: 0.0003
+
+policy_lr: 0.003
+
+q_weight_decay:  0.01
+
+policy_weight_decay:  0.001
+
 learning_starts: 0
+
 autotune: true
+
+alpha: 0.2
+
 use_burning_action: false
-q_weight_decay:  0.001
-policy_weight_decay:  0.0001
 
 target_network_frequency: 1 
+
+tau: 0.001
+
 policy_frequency: 1
+
+
+state: 0
+overall_iter: 1
+best_state: 0
+num_iter: 100 

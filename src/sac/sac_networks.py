@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 
-LOG_STD_MAX = 3
-LOG_STD_MIN = -5
+LOG_STD_MAX = 2
+LOG_STD_MIN = -20
 
 class Actor(nn.Module):
     def __init__(self, args,use_xavier = True):
@@ -34,9 +34,10 @@ class Actor(nn.Module):
         x = F.relu(self.fc2(x))
         mean = self.fc_mean(x)
         log_std = self.fc_logstd(x)
-        log_std = torch.tanh(log_std)
-        log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)  # From SpinUp / Denis Yarats
+        # log_std = torch.tanh(log_std) # From SpinUp / Denis Yarats # you can either you this method or the one below for computing log_std
+        # log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)  # From SpinUp / Denis Yarats
 
+        log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX) 
         return mean, log_std
 
     def get_action(self, obs):

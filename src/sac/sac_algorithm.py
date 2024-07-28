@@ -53,10 +53,11 @@ class SAC:
             self.alpha = args.alpha
 
         #ReplayBuffer
-        self.rb = TensorDictReplayBuffer(
-                        storage=LazyMemmapStorage(args.buffer_size,), sampler=SamplerWithoutReplacement()
-                                                        )
-
+        # self.rb = TensorDictReplayBuffer(
+        #                 storage=LazyMemmapStorage(args.buffer_size,), 
+        #                 sampler=SamplerWithoutReplacement(),
+        #                                                 )
+        self.rb = TensorDictReplayBuffer(storage=LazyMemmapStorage(args.buffer_size,) )
     def observe(self,batch_obs,batch_actions,batch_rewards,batch_next_obs,batch_dones):
         """
             Observe the environment and store the transition in the replay buffer
@@ -169,7 +170,6 @@ class SAC:
                 self.writer.add_scalar("losses/qf_loss", qf_loss.item() / 2.0, self.global_step)
                 self.writer.add_scalar("losses/actor_loss", actor_loss.item(), self.global_step)
                 self.writer.add_scalar("losses/alpha", self.alpha, self.global_step)
-                # print("SPS:", int(self.global_step / (time.time() - self.start_time)))
                 self.writer.add_scalar("charts/SPS", int(self.global_step / (time.time() - self.start_time)), self.global_step)
                 if self.args.autotune:
                     self.writer.add_scalar("losses/alpha_loss", alpha_loss.item(), self.global_step)
