@@ -142,10 +142,10 @@ def train(env,options,train_options,agent,beam_id,writer):
             
     train_options['state'] = state  # used for the next loop
     train_options['best_state'] = CB_Env.best_bf_vec  # used for clustering and assignment
-
-    writer.add_scalars(f'gain_records/Beamforming_gain_beam_{beam_id}', 
-                        {'gain': float(max_previous_gain), 'EGC': float(CB_Env.compute_EGC())}, 
-                        agent.global_step)
+    if writer is not None:
+        writer.add_scalars(f'gain_records/Beamforming_gain_beam_{beam_id}', 
+                            {'gain': float(max_previous_gain), 'EGC': float(CB_Env.compute_EGC())}, 
+                            agent.global_step)
         # print(
         #     "Beam: %d, Iter: %d, Reward pred: %d, Reward: %d, BF Gain pred: %.2f, BF Gain: %.2f" % \
         #     (beam_id, train_options['overall_iter'],
@@ -308,7 +308,7 @@ def main():
                 for beam_id in range(options['num_NNs']):
                     train_opt_list[beam_id] = train(env_list[beam_id],options, train_opt_list[beam_id],agent_list[beam_id], beam_id,writer)
             else:
-                train_opt_list = run_parallel_training(env_list, options, train_opt_list, agent_list, writer)
+                train_opt_list = run_parallel_training(env_list, options, train_opt_list, agent_list, None)
     writer.close()
     num_beam = options['num_NNs']
     num_ant = options['num_ant']
