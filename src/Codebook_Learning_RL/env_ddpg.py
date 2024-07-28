@@ -8,7 +8,7 @@ class envCB:
     def __init__(self, ch, num_ant, num_bits, idx, options,experiment_path,device):
 
         self.idx = idx
-        self.device = 'cuda:0'
+        self.device = device
         self.num_ant = num_ant
         self.num_bits = num_bits
         self.cb_size = 2 ** self.num_bits
