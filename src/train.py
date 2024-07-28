@@ -20,7 +20,8 @@ from datetime import datetime
 from sac.sac_algorithm import SAC
 from torch.utils.tensorboard import SummaryWriter
 import scipy.io as scio
-
+import torch.multiprocessing as mp
+from torch.multiprocessing import Process, Queue
 
 class Config(object):
     def __init__(self, dictionary):
@@ -40,6 +41,45 @@ def getdatetime():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
+def train_worker(beam_id, env, options, train_opt, agent, writer, result_queue):
+    # Set the GPU for this process
+    torch.cuda.set_device(train_opt['device'])
+    # Run the training function
+    result = train(env, options, train_opt, agent, beam_id, writer)
+    
+    # Put the result in the queue
+    result_queue.put((beam_id, result))
+
+def run_parallel_training(env_list, options, train_opt_list, agent_list, writer):
+    num_beams = options['num_NNs']
+    
+    # Create a queue to store results
+    result_queue = Queue()
+    
+    # Create and start processes
+    processes = []
+    for beam_id in range(num_beams):
+        p = Process(target=train_worker, args=(beam_id, env_list[beam_id], options, 
+                                               train_opt_list[beam_id], agent_list[beam_id], 
+                                               writer, result_queue))
+        p.start()
+        processes.append(p)
+    
+    # Wait for all processes to complete
+    for p in processes:
+        p.join()
+    
+    # Collect results
+    results = []
+    while not result_queue.empty():
+        results.append(result_queue.get())
+    
+    # Sort results by beam_id and update train_opt_list
+    results.sort(key=lambda x: x[0])
+    for beam_id, result in results:
+        train_opt_list[beam_id] = result
+    
+    return train_opt_list
 
 def train(env,options,train_options,agent,beam_id,writer):
 
@@ -264,9 +304,11 @@ def main():
                 env_list[ii].ch = ch_group[assignment_record[ii]].to(train_opt_list[ii]['device'])
                 env_list[ii].EGC_history.append(env_list[ii].compute_EGC())
         #     print("Assignment uses %s seconds." % (time.time() - start_time))
-            for beam_id in range(options['num_NNs']):
-                train_opt_list[beam_id] = train(env_list[beam_id],options, train_opt_list[beam_id],agent_list[beam_id], beam_id,writer)
-
+            if env_config.parrallel_devices == None:
+                for beam_id in range(options['num_NNs']):
+                    train_opt_list[beam_id] = train(env_list[beam_id],options, train_opt_list[beam_id],agent_list[beam_id], beam_id,writer)
+            else:
+                train_opt_list = run_parallel_training(env_list, options, train_opt_list, agent_list, writer)
     writer.close()
     num_beam = options['num_NNs']
     num_ant = options['num_ant']
