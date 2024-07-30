@@ -1,4 +1,4 @@
-exp_name: "sac"
+exp_name: "sac_NLOS"
 
 seed: 0
 
@@ -8,7 +8,7 @@ batch_size: 1024
 
 gamma: 0
 
-device: "cuda:0"
+device: "cuda:15"
 
 torch_deterministic: true
 

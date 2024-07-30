@@ -118,9 +118,9 @@ def train(env,options,train_options,agent,beam_id,writer):
 
 
 def main():
-    experiments_dir = 'experiments/runs/'
-    env_config_path = 'experiments/configs/env_config.yaml'
-    sac_config_path = 'experiments/configs/sac_config.yaml'
+    experiments_dir = os.path.join('experiments', 'runs')
+    env_config_path = os.path.join('experiments', 'configs', 'env_config.yaml')
+    sac_config_path = os.path.join('experiments', 'configs', 'sac_config.yaml')
     with open(sac_config_path) as f:
         train_opt=yaml.load(f, Loader=yaml.FullLoader)
 
