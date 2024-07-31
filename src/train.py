@@ -170,6 +170,11 @@ def main():
     ch = dataPrep(options['path'])
     ch = np.concatenate((ch[:, :options['num_ant']],
                         ch[:, int(ch.shape[1] / 2):int(ch.shape[1] / 2) + options['num_ant']]), axis=1)
+    if options['path'] == 'src/Codebook_Learning_RL/grid201-300.mat':
+        ch = ch[2500:17500,:]
+        print(f'NLOS Scenario with {ch.shape[0]} Users.')
+    else:
+        print(f'LOS Scenario with {ch.shape[0]} Users.')
     
     with torch.cuda.device(options['device']):
         u_classifier, sensing_beam = KMeans_only(ch, options['num_NNs'], n_bit=options['num_bits'], n_rand_beam=30)
