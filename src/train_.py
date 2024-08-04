@@ -309,7 +309,7 @@ def main():
             q_optimizer=q_optimizer,
             replay_buffer=replay_buffer,
             gamma=train_opt["gamma"],
-            entropy_lr=train_opt["entropy_lr"],
+            entropy_lr=train_opt["q_lr"],
             tau=train_opt["tau"],
             batch_size=train_opt["batch_size"],
             learning_starts=train_opt["learning_starts"],
@@ -318,7 +318,6 @@ def main():
             policy_frequency=train_opt["policy_frequency"],
             target_entropy=-train_opt["action_shape"],
         )
-        agent.start_time = time.time()
         agent_list.append(agent)
 
     with torch.cuda.device(options["device"]):
