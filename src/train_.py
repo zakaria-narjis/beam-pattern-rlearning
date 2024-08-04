@@ -317,6 +317,7 @@ def main():
             target_network_frequency=train_opt["target_network_frequency"],
             policy_frequency=train_opt["policy_frequency"],
             target_entropy=-train_opt["action_shape"],
+            writer = writer,
         )
         agent_list.append(agent)
 
