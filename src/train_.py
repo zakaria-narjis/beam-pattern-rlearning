@@ -16,11 +16,15 @@ import random
 import yaml
 from tqdm.auto import tqdm
 from datetime import datetime
-from sac.sac_algorithm import SAC
 from torch.utils.tensorboard import SummaryWriter
 import scipy.io as scio
 import torch.multiprocessing as mp
 from torch.multiprocessing import Process, Queue
+from modularl.agents import SAC
+from modularl.policies.gaussian_policy import GaussianPolicy
+from modularl.q_functions import SAQNetwork
+from modularl.replay_buffers import ReplayBuffer
+import torch.optim as optim
 
 
 class Config(object):
@@ -270,7 +274,50 @@ def main():
                 train_opt["device"],
             )
         )
-        agent = SAC(sac_config, writer)
+        actor = GaussianPolicy(
+            observation_shape=train_opt["obs_shape"],
+            action_shape=train_opt["action_shape"],
+            high_action=train_opt["high_action"],
+            low_action=train_opt["low_action"],
+        )
+        qf1 = SAQNetwork(
+            observation_shape=train_opt["obs_shape"],
+            action_shape=train_opt["action_shape"],
+        )
+        qf2 = SAQNetwork(
+            observation_shape=train_opt["obs_shape"],
+            action_shape=train_opt["action_shape"],
+        )
+        replay_buffer = ReplayBuffer(
+            buffer_size=train_opt["buffer_size"],
+        )
+        q_optimizer = optim.Adam(
+            list(qf1.parameters()) + list(qf2.parameters()),
+            lr=train_opt["q_lr"],
+            weight_decay=train_opt["q_weight_decay"],
+        )
+        actor_optimizer = optim.Adam(
+            list(actor.parameters()),
+            lr=train_opt["policy_lr"],
+            weight_decay=train_opt["policy_weight_decay"],
+        )
+        agent = SAC(
+            actor=actor,
+            qf1=qf1,
+            qf2=qf2,
+            actor_optimizer=actor_optimizer,
+            q_optimizer=q_optimizer,
+            replay_buffer=replay_buffer,
+            gamma=train_opt["gamma"],
+            entropy_lr=train_opt["entropy_lr"],
+            tau=train_opt["tau"],
+            batch_size=train_opt["batch_size"],
+            learning_starts=train_opt["learning_starts"],
+            device=train_opt["device"],
+            target_network_frequency=train_opt["target_network_frequency"],
+            policy_frequency=train_opt["policy_frequency"],
+            target_entropy=-train_opt["action_shape"],
+        )
         agent.start_time = time.time()
         agent_list.append(agent)
 
@@ -347,6 +394,8 @@ def main():
                 env_list[ii].EGC_history.append(env_list[ii].compute_EGC())
             #     print("Assignment uses %s seconds." % (time.time() - start_time))
             for beam_id in range(options["num_NNs"]):
+                if sample_id == 0:
+                    agent_list[beam_id].init()
                 train_opt_list[beam_id] = train(
                     env_list[beam_id],
                     options,

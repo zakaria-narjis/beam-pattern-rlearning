@@ -47,7 +47,15 @@ def init_weights(m):
 
 
 class OUNoise(object):
-    def __init__(self, action_shape, mu=0.0, theta=0.15, max_sigma=1, min_sigma=0.05, decay_period=100000):
+    def __init__(
+        self,
+        action_shape,
+        mu=0.0,
+        theta=0.15,
+        max_sigma=1,
+        min_sigma=0.05,
+        decay_period=100000,
+    ):
         self.mu = mu
         self.theta = theta
         self.sigma = max_sigma
@@ -65,12 +73,17 @@ class OUNoise(object):
 
     def evolve_state(self):
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * torch.normal(0, 1, size=self.action_dim).cuda()
+        dx = (
+            self.theta * (self.mu - x)
+            + self.sigma * torch.normal(0, 1, size=self.action_dim).cuda()
+        )
         self.state = x + dx
         return self.state
 
     def get_action(self, action, t=0):
         ou_state = self.evolve_state()
-        self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
+        self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(
+            1.0, t / self.decay_period
+        )
         # return torch.clamp(action + ou_state, self.low, self.high)
         return action + ou_state

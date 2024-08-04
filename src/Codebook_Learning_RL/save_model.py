@@ -13,50 +13,61 @@ from DDPG_classes import Actor, Critic, OUNoise, init_weights
 import pickle
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     options = {
-        'gpu_idx': 1,
-        'num_ant': 32,
-        'num_bits': 4,
-        'num_NNs': 8,
-        'ch_sample_ratio': 0.5,
-        'num_loop': 10000,  # outer loop
-        'target_update': 3,
-        'pf_print': 1000,
-        'path': './grid1101-1400.mat',
-        'clustering_mode': 'random',
-        'save_freq': 50000
+        "gpu_idx": 1,
+        "num_ant": 32,
+        "num_bits": 4,
+        "num_NNs": 8,
+        "ch_sample_ratio": 0.5,
+        "num_loop": 10000,  # outer loop
+        "target_update": 3,
+        "pf_print": 1000,
+        "path": "./grid1101-1400.mat",
+        "clustering_mode": "random",
+        "save_freq": 50000,
     }
 
     train_opt = {
-        'state': 0,
-        'best_state': 0,
-        'num_iter': 100,
-        'tau': 1e-2,
-        'overall_iter': 1,
-        'replay_memory': [],
-        'replay_memory_size': 8192,
-        'minibatch_size': 1024,
-        'gamma': 0
+        "state": 0,
+        "best_state": 0,
+        "num_iter": 100,
+        "tau": 1e-2,
+        "overall_iter": 1,
+        "replay_memory": [],
+        "replay_memory_size": 8192,
+        "minibatch_size": 1024,
+        "gamma": 0,
     }
 
-    ch = dataPrep(options['path'])  # numpy.ndarray: (#users, 128)
-    ch = np.concatenate((ch[:, :options['num_ant']],
-                         ch[:, int(ch.shape[1] / 2):int(ch.shape[1] / 2) + options['num_ant']]), axis=1)
+    ch = dataPrep(options["path"])  # numpy.ndarray: (#users, 128)
+    ch = np.concatenate(
+        (
+            ch[:, : options["num_ant"]],
+            ch[
+                :,
+                int(ch.shape[1] / 2) : int(ch.shape[1] / 2)
+                + options["num_ant"],
+            ],
+        ),
+        axis=1,
+    )
 
-    u_classifier, sensing_beam = KMeans_only(ch, options['num_NNs'], n_rand_beam=30)
+    u_classifier, sensing_beam = KMeans_only(
+        ch, options["num_NNs"], n_rand_beam=30
+    )
     sensing_beam = torch.from_numpy(sensing_beam).float().cuda()
 
-    filename = 'kmeans_model.sav'
-    pickle.dump(u_classifier, open(filename, 'wb'))
+    filename = "kmeans_model.sav"
+    pickle.dump(u_classifier, open(filename, "wb"))
 
-    loaded_model = pickle.load(open(filename, 'rb'))
+    loaded_model = pickle.load(open(filename, "rb"))
 
-    for sample_id in range(options['num_loop']):
+    for sample_id in range(options["num_loop"]):
 
         # ---------- Sampling ---------- #
-        n_sample = int(ch.shape[0] * options['ch_sample_ratio'])
+        n_sample = int(ch.shape[0] * options["ch_sample_ratio"])
         ch_sample_id = np.random.permutation(ch.shape[0])[0:n_sample]
         ch_sample = torch.from_numpy(ch[ch_sample_id, :]).float().cuda()
 
@@ -69,8 +80,7 @@ if __name__ == '__main__':
         user_group = []  # order: clusters
         ch_group = []  # order: clusters
         len_group = []
-        for ii in range(options['num_NNs']):
+        for ii in range(options["num_NNs"]):
             user_group.append(np.where(labels == ii)[0].tolist())
             ch_group.append(ch_sample[user_group[ii], :])
         print(sample_id)
-

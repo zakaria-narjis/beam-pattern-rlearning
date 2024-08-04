@@ -5,13 +5,15 @@ import numpy as np
 
 class envCB:
 
-    def __init__(self, ch, num_ant, num_bits, idx, options,experiment_path,device):
+    def __init__(
+        self, ch, num_ant, num_bits, idx, options, experiment_path, device
+    ):
 
         self.idx = idx
         self.device = device
         self.num_ant = num_ant
         self.num_bits = num_bits
-        self.cb_size = 2 ** self.num_bits
+        self.cb_size = 2**self.num_bits
         self.codebook = self.codebook_gen()
         self.ch = torch.from_numpy(ch).float().to(device)
         self.state = torch.zeros((1, self.num_ant)).float().to(device)
@@ -33,20 +35,22 @@ class envCB:
         self.EGC_history = []
         self.experiment_path = experiment_path
 
-    def step(self, input_action):  # input_action: (1, num_ant), rep: phase vector
+    def step(
+        self, input_action
+    ):  # input_action: (1, num_ant), rep: phase vector
         self.state = input_action
         self.bf_vec = self.phase2bf(self.state)
         reward, bf_gain = self.reward_fn()
         terminal = 0
         return self.state.clone(), reward, bf_gain, terminal
-    
+
     def compute_EGC(self):
-        ch_r = torch.Tensor.cpu(self.ch.clone()).numpy()[:, :self.num_ant]
-        ch_i = torch.Tensor.cpu(self.ch.clone()).numpy()[:, self.num_ant:]
+        ch_r = torch.Tensor.cpu(self.ch.clone()).numpy()[:, : self.num_ant]
+        ch_i = torch.Tensor.cpu(self.ch.clone()).numpy()[:, self.num_ant :]
         radius = np.sqrt(np.square(ch_r) + np.square(ch_i))
         gain_opt = np.mean(np.square(np.sum(radius, axis=1)))
         return gain_opt
-    
+
     def reward_fn(self):
         bf_gain = self.bf_gain_cal()
         if bf_gain > self.previous_gain:
@@ -68,22 +72,30 @@ class envCB:
     def get_reward(self, input_action):
         inner_state = input_action
 
-        mat_dist = torch.abs(inner_state.reshape(self.num_ant, 1) - self.options['ph_table_rep'])
-        action_quant = self.options['ph_table_rep'][range(self.num_ant), torch.argmin(mat_dist, dim=1)].reshape(1, -1)
+        mat_dist = torch.abs(
+            inner_state.reshape(self.num_ant, 1) - self.options["ph_table_rep"]
+        )
+        action_quant = self.options["ph_table_rep"][
+            range(self.num_ant), torch.argmin(mat_dist, dim=1)
+        ].reshape(1, -1)
 
         inner_bf = self.phase2bf(action_quant)
         bf_gain = self.bf_gain_cal_only(inner_bf)
         if bf_gain > self.previous_gain:  # -1/1 reward mechanism
             if bf_gain > self.threshold:  # legacy
                 reward = np.array([1]).reshape((1, 1))
-                self.threshold = self.threshold_modif_get_reward(inner_bf, bf_gain)
+                self.threshold = self.threshold_modif_get_reward(
+                    inner_bf, bf_gain
+                )
 
             else:
                 reward = np.array([1]).reshape((1, 1))
         else:
-            if bf_gain > self.threshold: 
+            if bf_gain > self.threshold:
                 reward = np.array([1]).reshape((1, 1))
-                self.threshold = self.threshold_modif_get_reward(inner_bf, bf_gain)
+                self.threshold = self.threshold_modif_get_reward(
+                    inner_bf, bf_gain
+                )
 
             else:
                 reward = np.array([-1]).reshape((1, 1))
@@ -108,41 +120,25 @@ class envCB:
         return self.threshold
 
     def opt_bf_gain(self):
-        ch_r = torch.Tensor.cpu(self.ch.clone()).numpy()[:, :self.num_ant]
-        ch_i = torch.Tensor.cpu(self.ch.clone()).numpy()[:, self.num_ant:]
+        ch_r = torch.Tensor.cpu(self.ch.clone()).numpy()[:, : self.num_ant]
+        ch_i = torch.Tensor.cpu(self.ch.clone()).numpy()[:, self.num_ant :]
         radius = np.sqrt(np.square(ch_r) + np.square(ch_i))
         gain_opt = np.mean(np.square(np.sum(radius, axis=1)))
-        print('EGC bf gain: ', gain_opt)
+        print("EGC bf gain: ", gain_opt)
         # return gain_opt
 
     def phase2bf(self, ph_vec):
         bf_vec = torch.zeros((1, 2 * self.num_ant)).float().to(self.device)
         for kk in range(self.num_ant):
-            bf_vec[0, 2*kk] = torch.cos(ph_vec[0, kk])
-            bf_vec[0, 2*kk+1] = torch.sin(ph_vec[0, kk])
+            bf_vec[0, 2 * kk] = torch.cos(ph_vec[0, kk])
+            bf_vec[0, 2 * kk + 1] = torch.sin(ph_vec[0, kk])
         return bf_vec
 
-    def bf_gain_cal(self): # used in self.reward_fn
+    def bf_gain_cal(self):  # used in self.reward_fn
         bf_r = self.bf_vec[0, ::2].clone().reshape(1, -1)
         bf_i = self.bf_vec[0, 1::2].clone().reshape(1, -1)
-        ch_r = torch.squeeze(self.ch[:, :self.num_ant].clone())
-        ch_i = torch.squeeze(self.ch[:, self.num_ant:].clone())
-        bf_gain_1 = torch.matmul(bf_r, torch.t(ch_r))
-        bf_gain_2 = torch.matmul(bf_i, torch.t(ch_i))
-        bf_gain_3 = torch.matmul(bf_r, torch.t(ch_i))
-        bf_gain_4 = torch.matmul(bf_i, torch.t(ch_r))
-
-        bf_gain_r = (bf_gain_1+bf_gain_2)**2
-        bf_gain_i = (bf_gain_3-bf_gain_4)**2
-        bf_gain_pattern = bf_gain_r + bf_gain_i
-        bf_gain = torch.mean(bf_gain_pattern)
-        return bf_gain
-
-    def bf_gain_cal_only(self, bf_vec): # used in self.get_reward
-        bf_r = bf_vec[0, ::2].clone().reshape(1, -1)
-        bf_i = bf_vec[0, 1::2].clone().reshape(1, -1)
-        ch_r = torch.squeeze(self.ch[:, :self.num_ant].clone())
-        ch_i = torch.squeeze(self.ch[:, self.num_ant:].clone())
+        ch_r = torch.squeeze(self.ch[:, : self.num_ant].clone())
+        ch_i = torch.squeeze(self.ch[:, self.num_ant :].clone())
         bf_gain_1 = torch.matmul(bf_r, torch.t(ch_r))
         bf_gain_2 = torch.matmul(bf_i, torch.t(ch_i))
         bf_gain_3 = torch.matmul(bf_r, torch.t(ch_i))
@@ -154,29 +150,50 @@ class envCB:
         bf_gain = torch.mean(bf_gain_pattern)
         return bf_gain
 
+    def bf_gain_cal_only(self, bf_vec):  # used in self.get_reward
+        bf_r = bf_vec[0, ::2].clone().reshape(1, -1)
+        bf_i = bf_vec[0, 1::2].clone().reshape(1, -1)
+        ch_r = torch.squeeze(self.ch[:, : self.num_ant].clone())
+        ch_i = torch.squeeze(self.ch[:, self.num_ant :].clone())
+        bf_gain_1 = torch.matmul(bf_r, torch.t(ch_r))
+        bf_gain_2 = torch.matmul(bf_i, torch.t(ch_i))
+        bf_gain_3 = torch.matmul(bf_r, torch.t(ch_i))
+        bf_gain_4 = torch.matmul(bf_i, torch.t(ch_r))
+
+        bf_gain_r = (bf_gain_1 + bf_gain_2) ** 2
+        bf_gain_i = (bf_gain_3 - bf_gain_4) ** 2
+        bf_gain_pattern = bf_gain_r + bf_gain_i
+        bf_gain = torch.mean(bf_gain_pattern)
+        return bf_gain
 
     def gain_recording(self, bf_vec, idx):
-        new_gain = torch.Tensor.cpu(self.achievement).detach().numpy().reshape((1, 1))
+        new_gain = (
+            torch.Tensor.cpu(self.achievement).detach().numpy().reshape((1, 1))
+        )
         bf_print = torch.Tensor.cpu(bf_vec).detach().numpy().reshape(1, -1)
         if new_gain > max(self.gain_record):
             self.gain_record.append(new_gain)
-            self.best_bf_vec = torch.Tensor.cpu(bf_vec).detach().numpy().reshape(1, -1)
-            beam_path = os.path.join(self.experiment_path, 'beams/beams_' + str(idx) + '_max.txt')
+            self.best_bf_vec = (
+                torch.Tensor.cpu(bf_vec).detach().numpy().reshape(1, -1)
+            )
+            beam_path = os.path.join(
+                self.experiment_path, "beams/beams_" + str(idx) + "_max.txt"
+            )
             if os.path.exists(beam_path):
-                with open(beam_path, 'ab') as bm:
-                    np.savetxt(bm, new_gain, fmt='%.2f', delimiter='\n')
-                with open(beam_path, 'ab') as bm:
-                    np.savetxt(bm, bf_print, fmt='%.5f', delimiter=',')
+                with open(beam_path, "ab") as bm:
+                    np.savetxt(bm, new_gain, fmt="%.2f", delimiter="\n")
+                with open(beam_path, "ab") as bm:
+                    np.savetxt(bm, bf_print, fmt="%.5f", delimiter=",")
             else:
-                np.savetxt(beam_path, new_gain, fmt='%.2f', delimiter='\n')
-                with open(beam_path, 'ab') as bm:
-                    np.savetxt(bm, bf_print, fmt='%.5f', delimiter=',')
+                np.savetxt(beam_path, new_gain, fmt="%.2f", delimiter="\n")
+                with open(beam_path, "ab") as bm:
+                    np.savetxt(bm, bf_print, fmt="%.5f", delimiter=",")
             self.best_bf_vec = bf_vec
 
     def codebook_gen(self):
         angles = np.linspace(0, 2 * np.pi, self.cb_size, endpoint=False)
         cb = np.exp(1j * angles)
-        codebook = torch.zeros((self.cb_size, 2)) # shape of the codebook
+        codebook = torch.zeros((self.cb_size, 2))  # shape of the codebook
         for ii in range(cb.shape[0]):
             codebook[ii, 0] = torch.tensor(np.real(cb[ii]))
             codebook[ii, 1] = torch.tensor(np.imag(cb[ii]))
@@ -190,11 +207,18 @@ class envCB:
         return bf_vec
 
     def init_best(self):
-        ph_book = np.linspace(-np.pi, np.pi, 2 ** self.num_bits, endpoint=False)
-        ph_vec = np.array([[ph_book[np.random.randint(0, len(ph_book))] for ii in range(self.num_ant)]])
+        ph_book = np.linspace(-np.pi, np.pi, 2**self.num_bits, endpoint=False)
+        ph_vec = np.array(
+            [
+                [
+                    ph_book[np.random.randint(0, len(ph_book))]
+                    for ii in range(self.num_ant)
+                ]
+            ]
+        )
         bf_complex = np.exp(1j * ph_vec)
         bf_vec = np.empty((1, 2 * self.num_ant))
         for kk in range(self.num_ant):
-            bf_vec[0, 2*kk] = np.real(bf_complex[0, kk])
-            bf_vec[0, 2*kk+1] = np.imag(bf_complex[0, kk])
+            bf_vec[0, 2 * kk] = np.real(bf_complex[0, kk])
+            bf_vec[0, 2 * kk + 1] = np.imag(bf_complex[0, kk])
         return torch.from_numpy(bf_vec).float().to(self.device)
