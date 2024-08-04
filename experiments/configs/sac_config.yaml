@@ -1,6 +1,6 @@
 exp_name: "sac_LOS"
 
-seed: 0
+seed: 42
 
 buffer_size: 8192
 

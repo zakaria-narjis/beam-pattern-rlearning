@@ -317,8 +317,9 @@ def main():
             target_network_frequency=train_opt["target_network_frequency"],
             policy_frequency=train_opt["policy_frequency"],
             target_entropy=-train_opt["action_shape"],
-            writer = writer,
+            writer=writer,
         )
+        agent.init()
         agent_list.append(agent)
 
     with torch.cuda.device(options["device"]):
@@ -394,8 +395,6 @@ def main():
                 env_list[ii].EGC_history.append(env_list[ii].compute_EGC())
             #     print("Assignment uses %s seconds." % (time.time() - start_time))
             for beam_id in range(options["num_NNs"]):
-                if sample_id == 0:
-                    agent_list[beam_id].init()
                 train_opt_list[beam_id] = train(
                     env_list[beam_id],
                     options,
