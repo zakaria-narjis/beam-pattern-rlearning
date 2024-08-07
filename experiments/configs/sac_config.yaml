@@ -1,5 +1,7 @@
 exp_name: "sac_LOS"
 
+algo: "td3"
+
 seed: 42
 
 buffer_size: 8192
