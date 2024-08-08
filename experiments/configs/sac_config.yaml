@@ -1,8 +1,8 @@
-exp_name: "sac_LOS"
+exp_name: "TD3_LOS"
 
 algo: "td3"
 
-seed: 42
+seed: 1
 
 buffer_size: 8192
 
