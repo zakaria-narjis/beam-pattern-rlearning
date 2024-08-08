@@ -69,13 +69,13 @@ class OUNoise(object):
         self.device = "cuda:15"
     def reset(self):
         state = torch.ones(self.action_dim) * self.mu
-        return state.float().to(self.device)
+        return state.float().to("cuda:15")
 
     def evolve_state(self):
         x = self.state
         dx = (
             self.theta * (self.mu - x)
-            + self.sigma * torch.normal(0, 1, size=self.action_dim).to(self.device)
+            + self.sigma * torch.normal(0, 1, size=self.action_dim).to("cuda:15")
         )
         self.state = x + dx
         return self.state
