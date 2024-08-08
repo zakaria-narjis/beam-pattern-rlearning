@@ -7,6 +7,7 @@ from torch import distributions
 from scipy.optimize import linear_sum_assignment
 from Codebook_Learning_RL.DataPrep import dataPrep
 from Codebook_Learning_RL.env_ddpg import envCB
+from Codebook_Learning_RL.DDPG_classes import OUNoise
 from Codebook_Learning_RL.clustering import KMeans_only
 from Codebook_Learning_RL.function_lib import bf_gain_cal, corr_mining
 import time
@@ -45,7 +46,7 @@ def getdatetime():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
-def train(env, options, train_options, agent, beam_id, writer):
+def train(env, options, train_options, agent, beam_id, writer, ounoise):
 
     device = train_options["device"]
     CB_Env = env
@@ -64,8 +65,12 @@ def train(env, options, train_options, agent, beam_id, writer):
             CB_Env.get_reward(action.to(device))
         )
         reward_pred = torch.from_numpy(reward_pred).float().to(device)
-
-        action_pred_noisy = action
+        if train_options['algo'] == 'sac':
+            action_pred_noisy = action
+        else:
+            action_pred_noisy = ounoise.get_action(
+            action, t=train_options["overall_iter"]
+        )
         mat_dist = torch.abs(
             action_pred_noisy.reshape(options["num_ant"], 1)
             - options["ph_table_rep"]
@@ -261,6 +266,7 @@ def main():
         env_list = []
         train_opt_list = []
         agent_list = []
+        ounoise_list = []
     for beam_id in range(options["num_NNs"]):
         train_opt_list.append(copy.deepcopy(train_opt))
         env_list.append(
@@ -279,7 +285,7 @@ def main():
         elif train_opt["algo"]=="td3":
             agent = create_agent.td3(train_opt, writer)
         agent_list.append(agent)
-
+        ounoise_list.append(OUNoise((1, options["num_ant"])))
     with torch.cuda.device(options["device"]):
         for sample_id in tqdm(range(options["num_loop"])):
 
@@ -360,6 +366,7 @@ def main():
                     agent_list[beam_id],
                     beam_id,
                     writer,
+                    ounoise_list[beam_id]
                 )
 
     writer.close()
