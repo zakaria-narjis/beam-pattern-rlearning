@@ -99,6 +99,7 @@ class CreateAgent:
             batch_size=train_opt["batch_size"],
             learning_starts=train_opt["learning_starts"],
             device=train_opt["device"],
+            exploration_noise=0,
             policy_frequency=train_opt["policy_frequency"],
             writer=writer,
         )
