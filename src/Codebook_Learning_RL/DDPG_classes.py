@@ -50,6 +50,7 @@ class OUNoise(object):
     def __init__(
         self,
         action_shape,
+        device,
         mu=0.0,
         theta=0.15,
         max_sigma=1,
@@ -66,17 +67,17 @@ class OUNoise(object):
         self.low = -np.pi
         self.high = np.pi
         self.state = self.reset()
-        self.device = "cuda:15"
+        self.device = device
+
     def reset(self):
         state = torch.ones(self.action_dim) * self.mu
-        return state.float().to("cuda:15")
+        return state.float().to(self.device)
 
     def evolve_state(self):
         x = self.state
-        dx = (
-            self.theta * (self.mu - x)
-            + self.sigma * torch.normal(0, 1, size=self.action_dim).to("cuda:15")
-        )
+        dx = self.theta * (self.mu - x) + self.sigma * torch.normal(
+            0, 1, size=self.action_dim
+        ).to(self.device)
         self.state = x + dx
         return self.state
 

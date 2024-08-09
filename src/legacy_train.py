@@ -7,7 +7,6 @@ from torch import distributions
 from scipy.optimize import linear_sum_assignment
 from Codebook_Learning_RL.DataPrep import dataPrep
 from Codebook_Learning_RL.env_ddpg import envCB
-from Codebook_Learning_RL.DDPG_classes import OUNoise
 from Codebook_Learning_RL.clustering import KMeans_only
 from Codebook_Learning_RL.function_lib import bf_gain_cal, corr_mining
 import time
@@ -17,16 +16,12 @@ import random
 import yaml
 from tqdm.auto import tqdm
 from datetime import datetime
+from sac.sac_algorithm import SAC
 from torch.utils.tensorboard import SummaryWriter
 import scipy.io as scio
 import torch.multiprocessing as mp
 from torch.multiprocessing import Process, Queue
-from modularl.agents import SAC
-from modularl.policies.gaussian_policy import GaussianPolicy
-from modularl.q_functions import SAQNetwork
-from modularl.replay_buffers import ReplayBuffer
-import torch.optim as optim
-from create_agent import CreateAgent
+
 
 class Config(object):
     def __init__(self, dictionary):
@@ -46,7 +41,7 @@ def getdatetime():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
-def train(env, options, train_options, agent, beam_id, writer, ounoise):
+def train(env, options, train_options, agent, beam_id, writer):
 
     device = train_options["device"]
     CB_Env = env
@@ -65,12 +60,8 @@ def train(env, options, train_options, agent, beam_id, writer, ounoise):
             CB_Env.get_reward(action.to(device))
         )
         reward_pred = torch.from_numpy(reward_pred).float().to(device)
-        if train_options['algo'] == 'sac':
-            action_pred_noisy = action
-        else:
-            action_pred_noisy = ounoise.get_action(
-            action, t=train_options["overall_iter"]
-        )
+
+        action_pred_noisy = action
         mat_dist = torch.abs(
             action_pred_noisy.reshape(options["num_ant"], 1)
             - options["ph_table_rep"]
@@ -184,7 +175,7 @@ def main():
             )
         ),
     )
-    create_agent = CreateAgent()
+
     random.seed(sac_config.seed)
     np.random.seed(sac_config.seed)
     torch.manual_seed(sac_config.seed)
@@ -266,7 +257,6 @@ def main():
         env_list = []
         train_opt_list = []
         agent_list = []
-        ounoise_list = []
     for beam_id in range(options["num_NNs"]):
         train_opt_list.append(copy.deepcopy(train_opt))
         env_list.append(
@@ -280,12 +270,10 @@ def main():
                 train_opt["device"],
             )
         )
-        if train_opt["algo"] == "sac":
-            agent = create_agent.sac(train_opt, writer)
-        elif train_opt["algo"]=="td3":
-            agent = create_agent.td3(train_opt, writer)
+        agent = SAC(sac_config, writer)
+        agent.start_time = time.time()
         agent_list.append(agent)
-        ounoise_list.append(OUNoise((1, options["num_ant"])))
+
     with torch.cuda.device(options["device"]):
         for sample_id in tqdm(range(options["num_loop"])):
 
@@ -366,7 +354,6 @@ def main():
                     agent_list[beam_id],
                     beam_id,
                     writer,
-                    ounoise_list[beam_id]
                 )
 
     writer.close()
