@@ -66,8 +66,9 @@ class OUNoise(object):
         self.action_dim = action_shape
         self.low = -np.pi
         self.high = np.pi
-        self.state = self.reset()
         self.device = device
+        self.state = self.reset()
+        
 
     def reset(self):
         state = torch.ones(self.action_dim) * self.mu
