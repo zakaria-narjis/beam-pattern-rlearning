@@ -1,6 +1,6 @@
-exp_name: "TD3_LOS"
+exp_name: "DDPG_LOS_seed_1"
 
-algo: "td3"
+algo: "ddpg"
 
 seed: 1
 
