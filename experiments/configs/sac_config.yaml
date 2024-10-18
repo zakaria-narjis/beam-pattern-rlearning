@@ -1,6 +1,6 @@
-exp_name: "DDPG_LOS_seed_1"
+exp_name: "sac_NLOS_seed_1"
 
-algo: "ddpg"
+algo: "sac"
 
 seed: 1
 
