@@ -1,4 +1,4 @@
-device: "cuda:15"
+device: "cuda:12"
 num_ant: 32
 num_bits: 4
 num_NNs: 4  # codebook size

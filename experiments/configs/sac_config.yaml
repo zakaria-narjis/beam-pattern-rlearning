@@ -1,8 +1,8 @@
-exp_name: "sac_NLOS_seed_1"
+exp_name: "ddpg_NLOS_seed_0"
 
-algo: "sac"
+algo: "ddpg"
 
-seed: 1
+seed: 0
 
 buffer_size: 8192
 
@@ -10,7 +10,7 @@ batch_size: 1024
 
 gamma: 0
 
-device: "cuda:15"
+device: "cuda:12"
 
 torch_deterministic: true
 
