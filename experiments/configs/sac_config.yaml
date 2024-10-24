@@ -1,6 +1,6 @@
-exp_name: "td3_NLOS_seed_0"
+exp_name: "ddpg_NLOS_seed_0"
 
-algo: "td3"
+algo: "ddpg"
 
 seed: 0
 
