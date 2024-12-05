@@ -1,4 +1,4 @@
-exp_name: "ddpg_NLOS_seed_0"
+exp_name: "ddpg_LOS_seed_0"
 
 algo: "ddpg"
 
@@ -10,7 +10,7 @@ batch_size: 1024
 
 gamma: 0
 
-device: "cuda:12"
+device: "cuda:13"
 
 torch_deterministic: true
 
