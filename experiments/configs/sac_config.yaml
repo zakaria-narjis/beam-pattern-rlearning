@@ -1,6 +1,6 @@
-exp_name: "ddpg_LOS_seed_0"
+exp_name: "sac_LOS_seed_0"
 
-algo: "ddpg"
+algo: "sac"
 
 seed: 0
 
@@ -10,7 +10,7 @@ batch_size: 1024
 
 gamma: 0
 
-device: "cuda:13"
+device: "cuda:15"
 
 torch_deterministic: true
 
