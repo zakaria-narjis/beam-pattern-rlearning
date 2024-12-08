@@ -6,7 +6,7 @@ batch_size: 1024
 best_state: 0
 buffer_size: 8192
 device: cuda:14
-exp_name: sac_LOS_seed_0
+exp_name: td3_LOS_seed_0
 gamma: 0
 high_action: 3.141592653589793
 learning_starts: 0
