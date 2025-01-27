@@ -1,6 +1,6 @@
 exp_name: "td3_NLOS_seed_0"
 
-algo: "td3"
+algo: "td3" #sac or td3 or ddpg
 
 seed: 0
 

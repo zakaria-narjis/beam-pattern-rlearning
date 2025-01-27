@@ -147,8 +147,8 @@ def train(env, options, train_options, agent, beam_id, writer, ounoise):
 def main():
     experiments_dir = os.path.join("experiments", "runs")
     env_config_path = os.path.join("experiments", "configs", "env_config.yaml")
-    sac_config_path = os.path.join("experiments", "configs", "sac_config.yaml")
-    with open(sac_config_path) as f:
+    algo_config_path = os.path.join("experiments", "configs", "algo_config.yaml")
+    with open(algo_config_path) as f:
         train_opt = yaml.load(f, Loader=yaml.FullLoader)
 
     with open(env_config_path) as f:
@@ -159,10 +159,10 @@ def main():
     train_opt["action_shape"] = options["num_ant"]
     train_opt["obs_shape"] = options["num_ant"]
 
-    sac_config = Config(train_opt)
+    algo_config = Config(train_opt)
     env_config = Config(options)
 
-    exp_name = sanitize_filename(sac_config.exp_name)
+    exp_name = sanitize_filename(algo_config.exp_name)
     run_name = f"{exp_name}__{getdatetime()}"
     run_name = run_name[:255]
     run_dir = os.path.join(experiments_dir, run_name)
@@ -172,7 +172,7 @@ def main():
         "|param|value|\n|-|-|\n%s"
         % (
             "\n".join(
-                [f"|{key}|{value}|" for key, value in vars(sac_config).items()]
+                [f"|{key}|{value}|" for key, value in vars(algo_config).items()]
             )
         ),
     )
@@ -186,14 +186,14 @@ def main():
         ),
     )
     create_agent = CreateAgent()
-    random.seed(sac_config.seed)
-    np.random.seed(sac_config.seed)
-    torch.manual_seed(sac_config.seed)
-    torch.backends.cudnn.deterministic = sac_config.torch_deterministic
+    random.seed(algo_config.seed)
+    np.random.seed(algo_config.seed)
+    torch.manual_seed(algo_config.seed)
+    torch.backends.cudnn.deterministic = algo_config.torch_deterministic
     torch.autograd.set_detect_anomaly(True)
 
     with make_dirs_and_open(
-        os.path.join(run_dir, "configs/sac_config.yaml"), "w"
+        os.path.join(run_dir, "configs/algo_config.yaml"), "w"
     ) as f:
         yaml.dump(train_opt, f, indent=4, default_flow_style=False)
 
