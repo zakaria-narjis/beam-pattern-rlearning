@@ -379,7 +379,7 @@ def main():
                     ounoise_list[beam_id],
                 )
                 if train_opt['algo'] == 'ddpg' or train_opt['algo'] == 'td3':
-                    noise_records[beam_id].append(ounoise_list[beam_id].state)
+                    noise_records[beam_id].append(ounoise_list[beam_id].state.cpu().numpy().tolist())
     writer.close()
     num_beam = options["num_NNs"]
     num_ant = options["num_ant"]
