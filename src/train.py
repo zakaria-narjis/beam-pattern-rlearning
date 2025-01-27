@@ -295,7 +295,7 @@ def main():
             agent = create_agent.ddpg(train_opt, agent_writer)
         agent_list.append(agent)
         ounoise_list.append(OUNoise((1, options["num_ant"]), train_opt["device"]))
-        noise_records[beam_id].append(ounoise_list[beam_id].state)
+        noise_records[beam_id].append(ounoise_list[beam_id].state.cpu().numpy().tolist())
     with torch.cuda.device(options["device"]):
         for sample_id in tqdm(range(options["num_loop"])):
 
