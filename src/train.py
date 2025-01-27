@@ -268,8 +268,14 @@ def main():
         train_opt_list = []
         agent_list = []
         ounoise_list = []
+        agent_writers = []
+        noise_records = []
     for beam_id in range(options["num_NNs"]):
         train_opt_list.append(copy.deepcopy(train_opt))
+        agent_writer = SummaryWriter(os.path.join(run_dir, f"NN_results_{beam_id}"))
+        agent_writers.append(agent_writer)
+        noise_records.append([])
+        
         env_list.append(
             envCB(
                 ch,
@@ -282,13 +288,14 @@ def main():
             )
         )
         if train_opt["algo"] == "sac":
-            agent = create_agent.sac(train_opt, writer)
+            agent = create_agent.sac(train_opt, agent_writer)
         elif train_opt["algo"] == "td3":
-            agent = create_agent.td3(train_opt, writer)
+            agent = create_agent.td3(train_opt, agent_writer)
         elif train_opt["algo"] == "ddpg":
-            agent = create_agent.ddpg(train_opt, writer)
+            agent = create_agent.ddpg(train_opt, agent_writer)
         agent_list.append(agent)
         ounoise_list.append(OUNoise((1, options["num_ant"]), train_opt["device"]))
+        noise_records[beam_id].append(ounoise_list[beam_id].state)
     with torch.cuda.device(options["device"]):
         for sample_id in tqdm(range(options["num_loop"])):
 
@@ -371,7 +378,8 @@ def main():
                     writer,
                     ounoise_list[beam_id],
                 )
-
+                if train_opt['algo'] == 'ddpg' or train_opt['algo'] == 'td3':
+                    noise_records[beam_id].append(ounoise_list[beam_id].state)
     writer.close()
     num_beam = options["num_NNs"]
     num_ant = options["num_ant"]
@@ -388,7 +396,8 @@ def main():
     results = (1 / np.sqrt(num_ant)) * (
         results[:, ::2] + 1j * results[:, 1::2]
     )
-
+    results = np.array(noise_records)
+    np.save(os.path.join(run_dir, "noise_records"), results)
     scio.savemat(
         os.path.join(run_dir, "beams", "beam_codebook.mat"), {"beams": results}
     )
