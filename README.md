@@ -19,7 +19,7 @@ To set up the project, follow the steps below:
     ```
 3. **Modify experiments configuration**:
     - modify environement configuration ```experiments/config/env_config.yaml```
-    - modify RL algo configuration ```experiments/config/env_config.yaml```
+    - modify RL algo configuration ```experiments/config/algo_config.yaml``` (Note: in some previous experiments it was named sac_config.yaml)
 
 4. **Run training**
     ```bash
