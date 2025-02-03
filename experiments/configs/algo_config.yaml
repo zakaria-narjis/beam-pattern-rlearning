@@ -1,4 +1,4 @@
-exp_name: "sac_LOS_seed_0"
+exp_name: "sac_NLOS_seed_0"
     
 algo: "sac" #sac or td3 or ddpg
 
